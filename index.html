@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>เทียบภาพก่อน–หลังผ่าตัด</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Before/After">
+<meta name="theme-color" content="#EEF0F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171B1D" media="(prefers-color-scheme: dark)">
+<style>
+:root{
+  --bg:#EEF0F1; --panel:#FFFFFF; --ink:#1F2629; --muted:#5B666B; --line:#D5DADD;
+  --accent:#5B3A91; --accent-ink:#FFFFFF; --stage:#6E7274;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#171B1D; --panel:#22282B; --ink:#E7ECEE; --muted:#9AA6AB; --line:#343C40;
+    --accent:#A98BDB; --accent-ink:#1A1224; --stage:#5A5E60;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#171B1D; --panel:#22282B; --ink:#E7ECEE; --muted:#9AA6AB; --line:#343C40;
+  --accent:#A98BDB; --accent-ink:#1A1224; --stage:#5A5E60;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  font-size:15px;line-height:1.55;-webkit-text-size-adjust:100%}
+main{max-width:980px;margin:0 auto;padding:16px 14px 40px}
+header h1{font-size:1.45rem;font-weight:600;margin:4px 0 2px;letter-spacing:-.01em}
+header p{margin:0 0 14px;color:var(--muted);font-size:.9rem}
+
+.loaders{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.file{display:flex;align-items:center;gap:10px;padding:10px;border:1.5px dashed var(--line);
+  border-radius:10px;background:var(--panel);cursor:pointer;min-height:64px}
+.file:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.file input{position:absolute;opacity:0;width:1px;height:1px}
+.file .thumb{width:44px;height:44px;border-radius:6px;background:var(--stage) center/cover no-repeat;flex:none}
+.file b{display:block;font-weight:600}
+.file span{font-size:.8rem;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.file.has{border-style:solid;border-color:var(--accent)}
+.file div{min-width:0}
+
+.modes{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:12px;overflow-x:auto}
+.modes button{flex:1;white-space:nowrap}
+button{font:inherit;color:var(--ink);background:transparent;border:0;border-radius:7px;padding:8px 10px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.modes button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+#stage{position:relative;width:100%;max-height:72vh;margin:0 auto;background:var(--stage);
+  border-radius:4px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;aspect-ratio:3/4}
+.wrap{position:absolute;inset:0;overflow:hidden}
+.wrap img{position:absolute;left:0;top:0;max-width:none;pointer-events:none;transform-origin:50% 50%}
+.wrap img:not([src]){display:none}
+.grid{position:absolute;inset:0;pointer-events:none;display:none}
+#stage.g-thirds .grid,#stage.g-fine .grid{display:block}
+#stage.g-thirds .grid{background:
+  linear-gradient(90deg,transparent calc(33.333% - .5px),rgba(255,255,255,.6) calc(33.333% - .5px) calc(33.333% + .5px),transparent 0,transparent calc(50% - .5px),rgba(255,230,120,.75) calc(50% - .5px) calc(50% + .5px),transparent 0,transparent calc(66.666% - .5px),rgba(255,255,255,.6) calc(66.666% - .5px) calc(66.666% + .5px),transparent 0),
+  linear-gradient(0deg,transparent calc(33.333% - .5px),rgba(255,255,255,.6) calc(33.333% - .5px) calc(33.333% + .5px),transparent 0,transparent calc(66.666% - .5px),rgba(255,255,255,.6) calc(66.666% - .5px) calc(66.666% + .5px),transparent 0)}
+#stage.g-fine .grid{background:
+  linear-gradient(90deg,transparent calc(50% - .5px),rgba(255,230,120,.8) calc(50% - .5px) calc(50% + .5px),transparent 0),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.4) 0 1px,transparent 1px 5%),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.4) 0 1px,transparent 1px 5%)}
+.tag{position:absolute;top:8px;font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:4px;
+  background:rgba(0,0,0,.55);color:#fff;pointer-events:none}
+.before .tag{left:8px}.after .tag{right:8px}
+#stage.nolabels .tag{display:none}
+#handle{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);
+  transform:translateX(-1px);pointer-events:none}
+#handle::after{content:"";position:absolute;top:50%;left:50%;width:30px;height:30px;margin:-15px 0 0 -15px;
+  border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35);
+  background-image:linear-gradient(90deg,transparent 9px,#555 9px 11px,transparent 11px 19px,#555 19px 21px,transparent 21px)}
+#meas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+#stage.tooling{cursor:crosshair}
+#measList{list-style:none;padding:0;margin:8px 0 0;font-size:.9rem;font-variant-numeric:tabular-nums}
+#measList li{padding:4px 0;border-top:1px solid var(--line)}
+#empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
+  color:#fff;padding:20px;font-size:.95rem;pointer-events:none}
+#hint{font-size:.82rem;color:var(--muted);text-align:center;margin:8px 0 0;min-height:1.3em}
+
+/* side by side */
+#stage.sbs .wrap.before{right:50%}
+#stage.sbs .wrap.after{left:50%}
+#stage.stack .wrap.before{bottom:50%}
+#stage.stack .wrap.after{top:50%}
+.savebar{display:flex;justify-content:center;gap:8px;margin-top:10px}
+.save{background:var(--accent);color:var(--accent-ink);font-weight:600;padding:10px 18px;border-radius:8px}
+.save:disabled{opacity:.45;cursor:default}
+
+.controls{display:grid;gap:12px;margin-top:14px}
+@media (min-width:760px){.controls{grid-template-columns:1fr 1fr}}
+fieldset{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 12px 12px;margin:0;min-width:0}
+legend{font-weight:600;padding:0 4px;font-size:.92rem}
+.row{display:grid;grid-template-columns:5.5em 1fr 3.8em;align-items:center;gap:8px;margin-top:6px}
+.row label{font-size:.88rem;color:var(--muted)}
+.row output{font-size:.82rem;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.btn{border:1px solid var(--line);background:var(--bg)}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;font-size:.9rem}
+.note{font-size:.8rem;color:var(--muted);margin:8px 0 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>เทียบภาพก่อน–หลังผ่าตัด</h1>
+  <p>รูปเปิดอยู่ในเบราว์เซอร์นี้เท่านั้น ไม่มีการอัปโหลดไปที่ใด ปิดหน้าแล้วรูปหายไปด้วย</p>
+</header>
+
+<section class="loaders">
+  <label class="file" id="fBefore">
+    <input type="file" accept="image/*" data-which="before">
+    <span class="thumb"></span>
+    <div><b>ก่อนผ่าตัด</b><span>แตะเพื่อเลือกรูป</span></div>
+  </label>
+  <label class="file" id="fAfter">
+    <input type="file" accept="image/*" data-which="after">
+    <span class="thumb"></span>
+    <div><b>หลังผ่าตัด</b><span>แตะเพื่อเลือกรูป</span></div>
+  </label>
+</section>
+
+<div class="modes" role="group" aria-label="รูปแบบการเทียบ">
+  <button data-mode="slider" aria-pressed="true">สไลเดอร์</button>
+  <button data-mode="overlay" aria-pressed="false">ซ้อนภาพ</button>
+  <button data-mode="toggle" aria-pressed="false">แตะสลับ</button>
+  <button data-mode="sbs" aria-pressed="false">ซ้าย–ขวา</button>
+  <button data-mode="stack" aria-pressed="false">บน–ล่าง</button>
+</div>
+
+<div id="stage" class="g-off" tabindex="0" aria-label="พื้นที่เทียบภาพ">
+  <div class="wrap before"><img id="imgB" alt=""><div class="grid"></div><span class="tag">ก่อน</span></div>
+  <div class="wrap after"><img id="imgA" alt=""><div class="grid"></div><span class="tag">หลัง</span></div>
+  <div id="handle"></div>
+  <svg id="meas" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div id="empty">เลือกรูปก่อนและหลังผ่าตัดด้านบนเพื่อเริ่มเทียบ</div>
+</div>
+<p id="hint"></p>
+<div class="savebar"><button class="btn" id="undoBtn" disabled>ย้อนกลับ</button><button class="btn" id="redoBtn" disabled>ไปข้างหน้า</button><button class="save" id="saveBtn" disabled>บันทึกภาพ</button></div>
+
+<div class="controls">
+  <fieldset>
+    <legend>จัดตำแหน่งภาพ</legend>
+    <div class="opt" style="margin-top:2px"><label for="matchSel">จุดอ้างอิงใบหน้า</label>
+      <select id="matchSel">
+        <option value="eyes">หน้าตรง: กลางตาดำ 2 ข้าง</option>
+        <option value="lat">ด้านข้าง: tragus + หางตา</option>
+        <option value="free">กำหนดเอง 2 จุด</option>
+      </select>
+    </div>
+    <div class="btns">
+      <button class="btn" id="matchBtn" aria-pressed="false">จัดหน้าให้เท่ากัน</button>
+      <button class="btn" id="linkBtn" aria-pressed="false">ล็อกสองภาพ</button>
+    </div>
+    <div class="opt"><span>ภาพที่ปรับ</span>
+      <div class="btns" style="margin-top:0">
+        <button class="btn" id="tgtB" aria-pressed="false">ก่อน</button>
+        <button class="btn" id="tgtA" aria-pressed="true">หลัง</button>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn" id="alignBtn" aria-pressed="false">โหมดจัดตำแหน่ง</button>
+      <button class="btn" id="flipBtn" aria-pressed="false">กลับซ้าย–ขวา</button>
+      <button class="btn" id="resetBtn">รีเซ็ต</button>
+    </div>
+    <div class="row"><label for="sc">ขนาด</label><input id="sc" type="range" min="20" max="400" step="0.5" value="100"><output id="scO">100%</output></div>
+    <div class="row"><label for="ro">หมุน</label><input id="ro" type="range" min="-45" max="45" step="0.1" value="0"><output id="roO">0°</output></div>
+    <div class="row"><label for="tx">เลื่อนซ้าย–ขวา</label><input id="tx" type="range" min="-150" max="150" step="0.1" value="0"><output id="txO">0</output></div>
+    <div class="row"><label for="ty">เลื่อนขึ้น–ลง</label><input id="ty" type="range" min="-150" max="150" step="0.1" value="0"><output id="tyO">0</output></div>
+    <p class="note">จัดหน้าให้เท่ากัน: แตะจุดอ้างอิง 2 จุดบนภาพก่อน แล้วแตะจุดเดียวกันบนภาพหลัง ภาพหลังจะถูกย่อ ขยาย หมุน และเลื่อนให้ใบหน้าเท่ากับภาพก่อน จากนั้นสองภาพจะถูกล็อกไว้ ลากหรือซูมเพื่อจัดกรอบได้พร้อมกัน เลือกภาพที่จะปรับได้ทั้งก่อนและหลัง ในโหมดจัดตำแหน่ง ภาพหลังจะโปร่ง 50% ลากบนภาพเพื่อเลื่อน หรือใช้ปุ่มลูกศรบนคีย์บอร์ด (กด Shift เพื่อหมุน, Alt เพื่อย่อขยาย) ใช้จุดอ้างอิงที่ไม่เปลี่ยนจากการผ่าตัด เช่น หางตา หรือ tragus</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>เครื่องมือวัด</legend>
+    <div class="btns" style="margin-top:2px">
+      <button class="btn" id="fhBtn" aria-pressed="false">ปรับระนาบ FH</button>
+      <button class="btn" id="angBtn" aria-pressed="false">วัดมุม</button>
+      <button class="btn" id="clrBtn">ลบเส้นวัด</button>
+    </div>
+    <div class="opt"><label for="angType">ชนิดมุม</label>
+      <select id="angType"><option value="nla">Nasolabial</option><option value="nfa">Nasofrontal</option><option value="free">มุมอื่น</option></select>
+    </div>
+    <ul id="measList"></ul>
+    <p class="note">ปรับระนาบ FH: แตะ porion แล้วแตะ orbitale ภาพที่เลือกใน "ภาพที่ปรับ" จะหมุนจนเส้นนี้เป็นแนวนอน วัดมุม: แตะ 3 จุด โดยจุดที่ 2 คือยอดมุม เส้นวัดจะหายเมื่อเปลี่ยนโหมดหรือปรับตำแหน่งภาพ และจะติดไปกับไฟล์ที่บันทึก</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>การแสดงผล</legend>
+    <div class="row" id="opRow" hidden><label for="op">ความโปร่ง</label><input id="op" type="range" min="0" max="100" step="1" value="50"><output id="opO">50%</output></div>
+    <div class="opt"><label for="frameSel">สัดส่วนภาพรวม</label>
+      <select id="frameSel">
+        <option value="orig">ตามรูปต้นฉบับ</option>
+        <option value="1">1:1 จัตุรัส</option>
+        <option value="0.8">4:5 แนวตั้ง</option>
+        <option value="0.75">3:4 แนวตั้ง</option>
+        <option value="0.5625">9:16 สตอรี่</option>
+        <option value="1.7778">16:9 แนวนอน</option>
+        <option value="custom">กำหนดเอง</option>
+      </select>
+    </div>
+    <div class="opt" id="customRow" hidden><span>กว้าง : สูง</span>
+      <span><input id="cw" type="number" min="1" max="100" step="0.1" value="16" inputmode="decimal" style="width:4.5em;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:5px 6px"> :
+      <input id="ch" type="number" min="1" max="100" step="0.1" value="9" inputmode="decimal" style="width:4.5em;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:5px 6px"></span>
+    </div>
+    <div class="opt" id="scopeRow" hidden><label for="scopeSel">ใช้สัดส่วนนี้กับ</label>
+      <select id="scopeSel"><option value="whole">ภาพรวมทั้งไฟล์</option><option value="panel">แต่ละช่อง (ก่อน/หลัง)</option></select>
+    </div>
+    <div class="opt"><label for="fitSel">การวางภาพในกรอบ</label>
+      <select id="fitSel"><option value="contain">พอดีกรอบ (มีขอบ)</option><option value="cover">เต็มกรอบ (ครอป)</option></select>
+    </div>
+    <div class="opt"><label for="gridSel">เส้นช่วยจัด</label>
+      <select id="gridSel">
+        <option value="off">ไม่แสดง</option>
+        <option value="thirds">แบ่ง 3 ส่วน + เส้นกลาง</option>
+        <option value="fine">ตารางละเอียด + เส้นกลาง</option>
+      </select>
+    </div>
+    <div class="opt"><span>ป้ายก่อน/หลัง</span><button class="btn" id="labelBtn" aria-pressed="true">แสดง</button></div>
+    <div class="opt"><span>ธีม</span>
+      <select id="themeSel"><option value="">ตามระบบ</option><option value="light">สว่าง</option><option value="dark">มืด</option></select>
+    </div>
+    <p class="note" id="saveNote">ปุ่มบันทึกจะเปิดหน้าแชร์ของเครื่อง เลือก "บันทึกภาพ" เพื่อเก็บลง Photos ได้เลย ภาพที่ได้เป็นไปตามที่เห็นบนจอ (ไม่รวมเส้นช่วยจัด) ก่อนใช้ภาพคนไข้นอกการรักษาควรมีความยินยอมเป็นลายลักษณ์อักษร</p>
+  </fieldset>
+</div>
+</main>
+
+<script>
+(function(){
+  function T0(){return {tx:0,ty:0,s:100,r:0,flip:false}}
+  var TR={before:T0(),after:T0()},tgt='after';
+  function T(){return TR[tgt]}
+  function xfCss(t){return 'translate('+t.tx+'%,'+t.ty+'%) rotate('+t.r+'deg) scale('+(t.s/100*(t.flip?-1:1))+','+(t.s/100)+')'}
+  var S={scope:'whole',cw:16,ch:9,frame:'orig',fit:'contain',mode:'slider',split:50,opacity:50,align:false,showAfter:true,labels:true,ratio:3/4,hasB:false,hasA:false};
+  var $=function(id){return document.getElementById(id)};
+  var stage=$('stage'),imgB=$('imgB'),imgA=$('imgA'),handle=$('handle'),afterWrap=document.querySelector('.wrap.after');
+  var urls={};
+
+  document.querySelectorAll('.file input').forEach(function(inp){
+    inp.addEventListener('change',function(){
+      var f=inp.files&&inp.files[0]; if(!f) return;
+      var w=inp.dataset.which; if(urls[w]) URL.revokeObjectURL(urls[w]);
+      var u=URL.createObjectURL(f); urls[w]=u;
+      var box=inp.parentElement;
+      box.classList.add('has');
+      box.querySelector('.thumb').style.backgroundImage='url("'+u+'")';
+      box.querySelector('div span').textContent=f.name;
+      var img=w==='before'?imgB:imgA;
+      img.onload=function(){
+        if(w==='before'){S.hasB=true;S.ratio=img.naturalWidth/img.naturalHeight}
+        else{S.hasA=true;if(!S.hasB)S.ratio=img.naturalWidth/img.naturalHeight}
+        render();
+      };
+      img.src=u;
+    });
+  });
+
+  document.querySelectorAll('.modes button').forEach(function(b){
+    b.addEventListener('click',function(){S.mode=b.dataset.mode;S.showAfter=true;render()});
+  });
+
+  function bindRange(id,key,fmt,own){
+    var el=$(id),o=$(id+'O');
+    var obj=function(){return own?T():S};
+    el.addEventListener('input',function(){
+      var v=parseFloat(el.value);
+      if(!own){S[key]=v;render();return}
+      var t=T(),P=PW();
+      if(key==='s')change(0,0,v/t.s,0);
+      else if(key==='r')change(0,0,1,v-t.r);
+      else if(key==='tx')change((v-t.tx)/100*P.w,0,1,0);
+      else if(key==='ty')change(0,(v-t.ty)/100*P.h,1,0);
+      render();
+    });
+    return function(){el.value=obj()[key];o.textContent=fmt(obj()[key])};
+  }
+  var syncs=[
+    bindRange('sc','s',function(v){return v.toFixed(1).replace('.0','')+'%'},true),
+    bindRange('ro','r',function(v){return v.toFixed(1)+'°'},true),
+    bindRange('tx','tx',function(v){return v.toFixed(1)},true),
+    bindRange('ty','ty',function(v){return v.toFixed(1)},true),
+    bindRange('op','opacity',function(v){return Math.round(v)+'%'})
+  ];
+
+  $('alignBtn').onclick=function(){S.align=!S.align;render()};
+  $('flipBtn').onclick=function(){T().flip=!T().flip;render()};
+  $('resetBtn').onclick=function(){TR[tgt]=T0();render()};
+  $('tgtB').onclick=function(){tgt='before';render()};
+  $('tgtA').onclick=function(){tgt='after';render()};
+  $('labelBtn').onclick=function(){S.labels=!S.labels;render()};
+  $('gridSel').onchange=function(){render()};
+  $('frameSel').onchange=function(){S.frame=this.value;if(S.frame!=='orig'){S.fit='cover';$('fitSel').value='cover'}render()};
+  $('scopeSel').onchange=function(){S.scope=this.value;render()};
+  ['cw','ch'].forEach(function(id){$(id).addEventListener('input',function(){var v=parseFloat(this.value);if(v>0&&v<=100){S[id]=v;render()}})});
+  $('fitSel').onchange=function(){S.fit=this.value;render()};
+  $('themeSel').onchange=function(){
+    var v=this.value; if(v) document.documentElement.setAttribute('data-theme',v); else document.documentElement.removeAttribute('data-theme');
+  };
+
+  var beforeWrap=document.querySelector('.wrap.before');
+  function place(img,wrap,t){
+    var w=wrap.clientWidth,h=wrap.clientHeight,nw=img.naturalWidth,nh=img.naturalHeight;
+    if(!nw||!w||!h) return;
+    var k=(S.fit==='cover'?Math.max:Math.min)(w/nw,h/nh),dw=nw*k,dh=nh*k;
+    img.style.width=dw+'px';img.style.height=dh+'px';
+    img.style.left=(w-dw)/2+'px';img.style.top=(h-dh)/2+'px';
+    img.style.transform='translate('+(t.tx/100*w)+'px,'+(t.ty/100*h)+'px) rotate('+t.r+'deg) scale('+(t.s/100*(t.flip?-1:1))+','+(t.s/100)+')';
+  }
+  function frameAR(){
+    if(S.frame!=='orig'){
+      var b=S.frame==='custom'?S.cw/S.ch:parseFloat(S.frame);
+      if(S.scope==='panel'){if(S.mode==='sbs')b*=2;else if(S.mode==='stack')b/=2}
+      return b;
+    }
+    return S.mode==='sbs'?S.ratio*2:S.mode==='stack'?S.ratio/2:S.ratio;
+  }
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+  var link=false;
+  function PW(){return {w:beforeWrap.clientWidth||afterWrap.clientWidth||1,h:beforeWrap.clientHeight||afterWrap.clientHeight||1}}
+  function applyG(t,dx,dy,f,dr){
+    var P=PW(),X=t.tx/100*P.w,Y=t.ty/100*P.h,a=dr*Math.PI/180,c=Math.cos(a),sn=Math.sin(a);
+    t.tx=(f*(c*X-sn*Y)+dx)/P.w*100;t.ty=(f*(sn*X+c*Y)+dy)/P.h*100;t.s*=f;t.r+=dr;
+  }
+  function change(dx,dy,f,dr){
+    var list=link?[TR.before,TR.after]:[T()];
+    list.forEach(function(t){f=clamp(f,20/t.s,400/t.s)});
+    list.forEach(function(t){applyG(t,dx,dy,f,dr)});
+  }
+
+  function render(){
+    var split2=S.mode==='sbs'||S.mode==='stack';
+    var sbs=split2;
+    var ar=frameAR();
+    $('customRow').hidden=S.frame!=='custom';
+    $('scopeRow').hidden=S.frame==='orig'||!(S.mode==='sbs'||S.mode==='stack');
+
+    stage.className='g-'+$('gridSel').value+(S.mode==='sbs'?' sbs':'')+(S.mode==='stack'?' stack':'')+(S.labels?'':' nolabels');
+    stage.style.aspectRatio=ar+'';
+    var maxH=window.innerHeight*0.72;
+    stage.style.maxWidth=Math.round(maxH*ar)+'px';
+    $('saveBtn').disabled=!(S.hasB||S.hasA)||!downloads;
+
+    place(imgA,afterWrap,TR.after);
+    place(imgB,beforeWrap,TR.before);
+
+    var ghost=S.align&&!sbs;
+    var op=1,clip='none';
+    if(ghost){op=.5}
+    else if(S.mode==='overlay'){op=S.opacity/100}
+    else if(S.mode==='toggle'){op=S.showAfter?1:0}
+    else if(S.mode==='slider'){clip='inset(0 0 0 '+S.split+'%)'}
+    afterWrap.style.opacity=op;
+    afterWrap.style.clipPath=clip;afterWrap.style.webkitClipPath=clip;
+    handle.style.display=(S.mode==='slider'&&!ghost)?'block':'none';
+    handle.style.left=S.split+'%';
+    $('empty').hidden=S.hasB||S.hasA;
+
+    document.querySelectorAll('.modes button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.mode===S.mode)});
+    $('alignBtn').setAttribute('aria-pressed',S.align);
+    $('flipBtn').setAttribute('aria-pressed',T().flip);
+    $('tgtB').setAttribute('aria-pressed',tgt==='before');
+    $('tgtA').setAttribute('aria-pressed',tgt==='after');
+    $('labelBtn').setAttribute('aria-pressed',S.labels);
+    $('labelBtn').textContent=S.labels?'แสดง':'ซ่อน';
+    $('opRow').hidden=S.mode!=='overlay';
+    syncs.forEach(function(f){f()});
+
+    if(measures.length&&xfKey()!==measKey) measures=[];
+    drawMeas();
+    stage.classList.toggle('tooling',!!tool);
+    $('fhBtn').setAttribute('aria-pressed',tool==='fh');
+    $('matchBtn').setAttribute('aria-pressed',tool==='match');
+    $('linkBtn').setAttribute('aria-pressed',link);
+    $('undoBtn').disabled=!hist.length;
+    $('redoBtn').disabled=!(future.length&&snap()===lastRestored);
+    $('angBtn').setAttribute('aria-pressed',tool==='angle');
+    var h='';
+    if(tool==='match'){var M=MATCH[$('matchSel').value];h=(pts.length<2?'ภาพก่อน: แตะ ':'ภาพหลัง: แตะ ')+M[pts.length%2];}
+    else if(tool==='fh') h='FH ('+(tgt==='before'?'ภาพก่อน':'ภาพหลัง')+'): '+FH_STEPS[pts.length];
+    else if(tool==='angle'){var A=ANG[$('angType').value];h=A.name+': '+A.steps[pts.length];}
+    else if(flash) h=flash;
+    else if(link&&panMode()) h='ล็อกสองภาพอยู่: ลากหรือซูมเพื่อจัดกรอบพร้อมกัน';
+    else if(S.align) h='ลากบนภาพเพื่อเลื่อนภาพ'+(tgt==='before'?'ก่อน':'หลัง');
+    else if(S.mode==='sbs'||S.mode==='stack') h='ลากในแต่ละช่องเพื่อเลื่อนภาพ ซูมด้วยสองนิ้วหรือล้อเมาส์';
+    else if(S.mode==='slider') h='ลากบนภาพเพื่อเลื่อนเส้นแบ่ง';
+    else if(S.mode==='overlay') h='ปรับความโปร่งด้านล่าง';
+    else if(S.mode==='toggle') h='แตะภาพเพื่อสลับ — ตอนนี้แสดงภาพ'+(S.showAfter?'หลัง':'ก่อน');
+    $('hint').textContent=(S.hasB||S.hasA)?h:'';
+    flash='';
+  }
+
+  var drag=null,ptrs={},pinch=null,lastWheel=0;
+  function panMode(){return S.align||S.mode==='sbs'||S.mode==='stack'}
+  function pickPanel(e){
+    if(S.mode!=='sbs'&&S.mode!=='stack') return;
+    var rc=stage.getBoundingClientRect();
+    var first=S.mode==='sbs'?(e.clientX-rc.left)<rc.width/2:(e.clientY-rc.top)<rc.height/2;
+    tgt=first?'before':'after';
+  }
+  function pdist(){var k=Object.keys(ptrs);return Math.hypot(ptrs[k[0]].x-ptrs[k[1]].x,ptrs[k[0]].y-ptrs[k[1]].y)}
+  stage.addEventListener('pointerdown',function(e){
+    if(tool){addPoint(e);e.preventDefault();return}
+    try{stage.setPointerCapture(e.pointerId)}catch(_){}
+    ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+    if(Object.keys(ptrs).length===2&&panMode()){pinch={d:pdist()};drag=null;return}
+    if(Object.keys(ptrs).length>2) return;
+    if(panMode()) pickPanel(e);
+    drag={x:e.clientX,y:e.clientY,moved:false};
+    if(!S.align&&S.mode==='slider') setSplit(e);
+    render();
+  });
+  stage.addEventListener('pointermove',function(e){
+    if(ptrs[e.pointerId]) ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+    if(pinch&&Object.keys(ptrs).length===2){
+      var nd=pdist();if(pinch.d>0)change(0,0,nd/pinch.d,0);pinch.d=nd;render();return;
+    }
+    if(!drag) return;
+    var dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(Math.abs(dx)+Math.abs(dy)>3) drag.moved=true;
+    if(panMode()){
+      change(dx,dy,1,0);
+      drag.x=e.clientX;drag.y=e.clientY;render();
+    } else if(S.mode==='slider') setSplit(e);
+  });
+  function end(){
+    if(drag&&!drag.moved&&!S.align&&S.mode==='toggle'){S.showAfter=!S.showAfter;render()}
+    drag=null;
+  }
+  function up(e){delete ptrs[e.pointerId];if(Object.keys(ptrs).length<2)pinch=null}
+  stage.addEventListener('pointerup',function(e){up(e);end()});
+  stage.addEventListener('pointercancel',function(e){up(e);drag=null});
+  stage.addEventListener('wheel',function(e){
+    if(!panMode()||tool) return;
+    e.preventDefault();pickPanel(e);
+    var now=Date.now();if(now-lastWheel>400)checkpoint();lastWheel=now;
+    change(0,0,Math.exp(-e.deltaY*0.0015),0);render();
+  },{passive:false});
+  function setSplit(e){
+    var r=stage.getBoundingClientRect();
+    S.split=clamp((e.clientX-r.left)/r.width*100,0,100);render();
+  }
+
+  stage.addEventListener('keydown',function(e){
+    var k=e.key,step=e.ctrlKey||e.metaKey?1:0.2,used=true;
+    if(S.align){
+      var P=PW(),sx=step/100*P.w,sy=step/100*P.h;
+      if(e.shiftKey&&(k==='ArrowLeft'||k==='ArrowRight')) change(0,0,1,k==='ArrowRight'?step/2:-step/2);
+      else if(e.altKey&&(k==='ArrowUp'||k==='ArrowDown')) change(0,0,k==='ArrowUp'?1+step/50:1/(1+step/50),0);
+      else if(k==='ArrowLeft') change(-sx,0,1,0);
+      else if(k==='ArrowRight') change(sx,0,1,0);
+      else if(k==='ArrowUp') change(0,-sy,1,0);
+      else if(k==='ArrowDown') change(0,sy,1,0);
+      else used=false;
+    } else if(S.mode==='slider'&&(k==='ArrowLeft'||k==='ArrowRight')){
+      S.split=clamp(S.split+(k==='ArrowRight'?2:-2),0,100);
+    } else if(S.mode==='toggle'&&(k===' '||k==='Enter')){
+      S.showAfter=!S.showAfter;
+    } else used=false;
+    if(used){e.preventDefault();render()}
+  });
+
+  // ---- measuring ----
+  var tool=null,pts=[],measures=[],measKey='',flash='';
+  var FH_STEPS=['แตะ porion','แตะ orbitale'];
+  var ANG={nla:{name:'Nasolabial',steps:['แตะจุดบน columella','แตะ subnasale (ยอดมุม)','แตะ labrale superius']},
+           nfa:{name:'Nasofrontal',steps:['แตะ glabella','แตะ nasion (ยอดมุม)','แตะจุดบนสันจมูก']},
+           free:{name:'มุม',steps:['แตะจุดที่ 1','แตะยอดมุม','แตะจุดที่ 3']}};
+  function xfKey(){return S.mode+JSON.stringify(TR)}
+  $('fhBtn').onclick=function(){tool=tool==='fh'?null:'fh';pts=[];render()};
+  $('angBtn').onclick=function(){tool=tool==='angle'?null:'angle';pts=[];render()};
+  $('clrBtn').onclick=function(){measures=[];pts=[];tool=null;render()};
+  $('angType').onchange=function(){pts=[];render()};
+  var MATCH={eyes:['กลางตาดำข้างขวาของคนไข้','กลางตาดำข้างซ้ายของคนไข้'],lat:['tragus','หางตา (lateral canthus)'],free:['จุดที่ 1','จุดที่ 2']};
+  $('matchBtn').onclick=function(){
+    if(tool==='match'){tool=null;pts=[];render();return}
+    if(!(S.hasB&&S.hasA)){flash='เลือกทั้งภาพก่อนและภาพหลังก่อน';render();return}
+    if(S.mode!=='sbs'&&S.mode!=='stack') S.mode='sbs';
+    S.align=false;tool='match';pts=[];render();
+  };
+  $('linkBtn').onclick=function(){link=!link;render()};
+  $('matchSel').onchange=function(){if(tool==='match'){pts=[];render()}};
+  function toLocal(t,p,w,h){
+    var X=p.x-w/2-t.tx/100*w,Y=p.y-h/2-t.ty/100*h,a=-t.r*Math.PI/180,c=Math.cos(a),sn=Math.sin(a);
+    var rx=c*X-sn*Y,ry=sn*X+c*Y,sc=t.s/100;
+    return {x:rx/(sc*(t.flip?-1:1)),y:ry/sc};
+  }
+  function matchFaces(){
+    var P=PW(),w=P.w,h=P.h,A=TR.after,fx=A.flip?-1:1;
+    var p1=pts[0].pp,p2=pts[1].pp,q1=toLocal(A,pts[2].pp,w,h),q2=toLocal(A,pts[3].pp,w,h);
+    var ux=fx*(q2.x-q1.x),uy=q2.y-q1.y,vx=p2.x-p1.x,vy=p2.y-p1.y;
+    var lu=Math.hypot(ux,uy),lv=Math.hypot(vx,vy);
+    if(lu<3||lv<3){flash='จุดสองจุดชิดกันเกินไป ลองใหม่';return}
+    var sc=lv/lu,ang=Math.atan2(vy,vx)-Math.atan2(uy,ux);
+    ang=Math.atan2(Math.sin(ang),Math.cos(ang));
+    var c=Math.cos(ang),sn=Math.sin(ang),mx=sc*(c*fx*q1.x-sn*q1.y),my=sc*(sn*fx*q1.x+c*q1.y);
+    A.s=sc*100;A.r=ang*180/Math.PI;
+    A.tx=(p1.x-w/2-mx)/w*100;A.ty=(p1.y-h/2-my)/h*100;
+    link=true;
+    flash='จัดแล้ว: ภาพหลังปรับขนาด '+A.s.toFixed(0)+'% หมุน '+A.r.toFixed(1)+'° และล็อกสองภาพไว้';
+  }
+  function addPoint(e){
+    var rc=stage.getBoundingClientRect();
+    if(tool==='match'){
+      var isSbs=S.mode==='sbs',lx=e.clientX-rc.left,ly=e.clientY-rc.top;
+      var inFirst=isSbs?lx<rc.width/2:ly<rc.height/2;
+      var need=pts.length<2?'before':'after';
+      if((need==='before')!==inFirst){flash='แตะในช่องภาพ'+(need==='before'?'ก่อน':'หลัง');render();return}
+      var pp={x:lx-(!inFirst&&isSbs?rc.width/2:0),y:ly-(!inFirst&&!isSbs?rc.height/2:0)};
+      pts.push({x:lx/rc.width,y:ly/rc.height,pp:pp});
+      if(pts.length===4){matchFaces();tool=null;pts=[]}
+      render();return;
+    }
+    pts.push({x:(e.clientX-rc.left)/rc.width,y:(e.clientY-rc.top)/rc.height});
+    if(tool==='fh'&&pts.length===2){
+      var dx=(pts[1].x-pts[0].x)*rc.width,dy=(pts[1].y-pts[0].y)*rc.height;
+      if(Math.abs(dx)>2){
+        var th=Math.atan(dy/dx)*180/Math.PI,t=T(),old=t.r;
+        t.r=clamp(t.r-th,-45,45);
+        flash='ปรับ FH แล้ว: หมุน'+(tgt==='before'?'ภาพก่อน':'ภาพหลัง')+' '+(t.r-old).toFixed(1)+'°';
+      } else flash='สองจุดชิดกันเกินไป ลองใหม่';
+      tool=null;pts=[];
+    } else if(tool==='angle'&&pts.length===3){
+      measures.push({type:$('angType').value,p:pts});measKey=xfKey();
+      tool=null;pts=[];
+    }
+    render();
+  }
+  function angleOf(p,W,H){
+    var a=p[0],v=p[1],c=p[2];
+    var x1=(a.x-v.x)*W,y1=(a.y-v.y)*H,x2=(c.x-v.x)*W,y2=(c.y-v.y)*H;
+    var d=Math.sqrt((x1*x1+y1*y1)*(x2*x2+y2*y2));
+    return d?Math.acos(clamp((x1*x2+y1*y2)/d,-1,1))*180/Math.PI:0;
+  }
+  function geom(p,W,H,k){
+    var v={x:p[1].x*W,y:p[1].y*H},a={x:p[0].x*W,y:p[0].y*H},c={x:p[2].x*W,y:p[2].y*H};
+    var u1={x:a.x-v.x,y:a.y-v.y},u2={x:c.x-v.x,y:c.y-v.y};
+    var l1=Math.hypot(u1.x,u1.y)||1,l2=Math.hypot(u2.x,u2.y)||1;
+    var R=Math.min(l1,l2,40*k)*0.8;
+    var s1={x:v.x+u1.x/l1*R,y:v.y+u1.y/l1*R},s2={x:v.x+u2.x/l2*R,y:v.y+u2.y/l2*R};
+    var cross=u1.x*u2.y-u1.y*u2.x;
+    var bx=u1.x/l1+u2.x/l2,by=u1.y/l1+u2.y/l2,bl=Math.hypot(bx,by);
+    if(bl<1e-3){bx=-u1.y/l1;by=u1.x/l1;bl=1}
+    var t={x:v.x+bx/bl*(R+22*k),y:v.y+by/bl*(R+22*k)};
+    return {v:v,a:a,c:c,s1:s1,s2:s2,R:R,sweep:cross>0?1:0,t:t};
+  }
+  function label(m,W,H){return (ANG[m.type].name==='มุม'?'มุม':ANG[m.type].name)+' '+angleOf(m.p,W,H).toFixed(1)+'°'}
+  function drawMeas(){
+    var svg=$('meas'),W=stage.clientWidth,H=stage.clientHeight,out='',col='#FFD84D';
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    measures.forEach(function(m){
+      var g=geom(m.p,W,H,1);
+      out+='<g fill="none" stroke="'+col+'" stroke-width="2" stroke-linecap="round">'+
+        '<line x1="'+g.v.x+'" y1="'+g.v.y+'" x2="'+g.a.x+'" y2="'+g.a.y+'"/>'+
+        '<line x1="'+g.v.x+'" y1="'+g.v.y+'" x2="'+g.c.x+'" y2="'+g.c.y+'"/>'+
+        '<path d="M'+g.s1.x+' '+g.s1.y+' A'+g.R+' '+g.R+' 0 0 '+g.sweep+' '+g.s2.x+' '+g.s2.y+'"/></g>';
+      [g.a,g.v,g.c].forEach(function(q){out+='<circle cx="'+q.x+'" cy="'+q.y+'" r="3.5" fill="'+col+'"/>'});
+      out+='<text x="'+g.t.x+'" y="'+g.t.y+'" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="600" fill="#fff" stroke="rgba(0,0,0,.7)" stroke-width="3" paint-order="stroke" font-family="-apple-system,system-ui,sans-serif">'+angleOf(m.p,W,H).toFixed(1)+'°</text>';
+    });
+    pts.forEach(function(q,i){
+      out+='<circle cx="'+q.x*W+'" cy="'+q.y*H+'" r="5" fill="#fff" stroke="#5B3A91" stroke-width="2"/>';
+      if(i>0&&!(tool==='match'&&i===2)) out+='<line x1="'+pts[i-1].x*W+'" y1="'+pts[i-1].y*H+'" x2="'+q.x*W+'" y2="'+q.y*H+'" stroke="#fff" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    });
+    svg.innerHTML=out;
+    $('measList').innerHTML='';
+    measures.forEach(function(m){var li=document.createElement('li');li.textContent=label(m,W,H);$('measList').appendChild(li)});
+  }
+  function drawMeasCanvas(ctx,W,H){
+    var k=W/(stage.clientWidth||W),col='#FFD84D';
+    measures.forEach(function(m){
+      var g=geom(m.p,W,H,k);
+      ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2*k;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(g.a.x,g.a.y);ctx.lineTo(g.v.x,g.v.y);ctx.lineTo(g.c.x,g.c.y);ctx.stroke();
+      var a1=Math.atan2(g.s1.y-g.v.y,g.s1.x-g.v.x),a2=Math.atan2(g.s2.y-g.v.y,g.s2.x-g.v.x);
+      ctx.beginPath();ctx.arc(g.v.x,g.v.y,g.R,a1,a2,!g.sweep);ctx.stroke();
+      [g.a,g.v,g.c].forEach(function(q){ctx.beginPath();ctx.arc(q.x,q.y,3.5*k,0,Math.PI*2);ctx.fill()});
+      ctx.font='600 '+(14*k)+'px -apple-system,system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      var txt=angleOf(m.p,W,H).toFixed(1)+'°';
+      ctx.lineWidth=3*k;ctx.strokeStyle='rgba(0,0,0,.7)';ctx.strokeText(txt,g.t.x,g.t.y);
+      ctx.fillStyle='#fff';ctx.fillText(txt,g.t.x,g.t.y);
+      ctx.restore();
+    });
+  }
+
+  // ---- undo ----
+  var hist=[];
+  function snap(){return JSON.stringify({TR:TR,tgt:tgt,link:link,measures:measures,measKey:measKey,grid:$('gridSel').value,
+    S:{split:S.split,opacity:S.opacity,mode:S.mode,frame:S.frame,fit:S.fit,scope:S.scope,cw:S.cw,ch:S.ch,align:S.align,labels:S.labels}})}
+  function checkpoint(){var c=snap();if(!hist.length||hist[hist.length-1]!==c){hist.push(c);if(hist.length>150)hist.shift()}}
+  var future=[],lastRestored=null;
+  function undo(){
+    var cur=snap();
+    while(hist.length&&hist[hist.length-1]===cur)hist.pop();
+    if(!hist.length){flash='ไม่มีขั้นตอนให้ย้อนแล้ว';render();return}
+    if(cur!==lastRestored) future=[];
+    future.push(cur);
+    restore(hist.pop());
+  }
+  function redo(){
+    if(!future.length||snap()!==lastRestored){future=[];flash='ไม่มีขั้นตอนให้ไปข้างหน้า';render();return}
+    hist.push(snap());
+    restore(future.pop());
+  }
+  function restore(str){
+    var o=JSON.parse(str);
+    TR=o.TR;tgt=o.tgt;link=o.link;measures=o.measures;measKey=o.measKey;
+    for(var k in o.S)S[k]=o.S[k];
+    $('gridSel').value=o.grid;$('frameSel').value=S.frame;$('fitSel').value=S.fit;$('scopeSel').value=S.scope;$('cw').value=S.cw;$('ch').value=S.ch;
+    tool=null;pts=[];lastRestored=snap();render();
+  }
+  $('undoBtn').onclick=undo;
+  $('redoBtn').onclick=redo;
+  document.addEventListener('pointerdown',function(e){
+    if(!e.target.closest||e.target.closest('#undoBtn,#redoBtn')) return;
+    if(e.target.closest('#stage,.controls,.modes')) checkpoint();
+  },true);
+  document.addEventListener('keydown',function(e){
+    var mod=e.ctrlKey||e.metaKey,kz=e.key==='z'||e.key==='Z';
+    if(mod&&(kz||e.key==='y'||e.key==='Y')){
+      if(e.target.type==='number') return;
+      e.preventDefault();
+      if(kz&&!e.shiftKey) undo(); else redo();
+      return;
+    }
+    if(e.target.closest&&e.target.closest('#stage,.controls,.modes')) checkpoint();
+  },true);
+
+  // ---- save ----
+  var downloads=true;
+
+  function drawImg(ctx,img,x,y,w,h,xf,alpha){
+    if(!img.naturalWidth) return;
+    ctx.save();
+    ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+    ctx.globalAlpha=alpha==null?1:alpha;
+    var k=(S.fit==='cover'?Math.max:Math.min)(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*k,dh=img.naturalHeight*k;
+    if(xf){
+      ctx.translate(x+w/2+xf.tx/100*w,y+h/2+xf.ty/100*h);
+      ctx.rotate(xf.r*Math.PI/180);
+      ctx.scale(xf.s/100*(xf.flip?-1:1),xf.s/100);
+    } else ctx.translate(x+w/2,y+h/2);
+    ctx.drawImage(img,-dw/2,-dh/2,dw,dh);
+    ctx.restore();
+  }
+  function tag(ctx,text,x,y,pw,right){
+    var fs=Math.max(14,Math.round(pw*0.035));
+    ctx.save();ctx.font='600 '+fs+'px -apple-system,system-ui,sans-serif';
+    var tw=ctx.measureText(text).width,pad=fs*0.45,m=fs*0.6,bw=tw+pad*2,bh=fs*1.5;
+    var bx=right?x-m-bw:x+m;
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(bx,y+m,bw,bh);
+    ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText(text,bx+pad,y+m+bh/2);
+    ctx.restore();
+  }
+  function compose(){
+    var FA=frameAR(),L=S.frame==='orig'?(S.mode==='sbs'||S.mode==='stack'?3200:1600):2000,W,H;
+    if(FA>=1){W=L;H=Math.round(L/FA)}else{H=L;W=Math.round(L*FA)}
+    var pw=S.mode==='sbs'?W/2:W,ph=S.mode==='stack'?H/2:H;
+    var c=document.createElement('canvas');c.width=W;c.height=H;
+    var ctx=c.getContext('2d');
+    ctx.fillStyle='#6E7274';ctx.fillRect(0,0,W,H);
+    var ghost=S.align&&!(S.mode==='sbs'||S.mode==='stack');
+    if(S.mode==='sbs'||S.mode==='stack'){
+      var ax=S.mode==='sbs'?pw:0,ay=S.mode==='stack'?ph:0;
+      drawImg(ctx,imgB,0,0,pw,ph,TR.before);
+      drawImg(ctx,imgA,ax,ay,pw,ph,TR.after);
+      if(S.labels){tag(ctx,'ก่อน',0,0,pw,false);tag(ctx,'หลัง',ax,ay,pw,false)}
+    } else if(S.mode==='slider'&&!ghost){
+      var sx=S.split/100*W;
+      drawImg(ctx,imgB,0,0,W,H,TR.before);
+      ctx.save();ctx.beginPath();ctx.rect(sx,0,W-sx,H);ctx.clip();
+      ctx.fillStyle='#6E7274';ctx.fillRect(sx,0,W-sx,H);
+      drawImg(ctx,imgA,0,0,W,H,TR.after);ctx.restore();
+      ctx.fillStyle='#fff';ctx.fillRect(sx-1.5,0,3,H);
+      if(S.labels){tag(ctx,'ก่อน',0,0,pw,false);tag(ctx,'หลัง',W,0,pw,true)}
+    } else if(S.mode==='toggle'&&!ghost){
+      if(S.showAfter)drawImg(ctx,imgA,0,0,W,H,TR.after);else drawImg(ctx,imgB,0,0,W,H,TR.before);
+      if(S.labels)tag(ctx,S.showAfter?'หลัง':'ก่อน',0,0,pw,false);
+    } else {
+      drawImg(ctx,imgB,0,0,W,H,TR.before);
+      drawImg(ctx,imgA,0,0,W,H,TR.after,ghost?.5:S.opacity/100);
+      if(S.labels)tag(ctx,'ก่อน/หลัง ซ้อนกัน',0,0,pw,false);
+    }
+    drawMeasCanvas(ctx,W,H);
+    return c;
+  }
+  function dataURLtoBlob(u){
+    var parts=u.split(','),bin=atob(parts[1]),n=bin.length,arr=new Uint8Array(n);
+    for(var i=0;i<n;i++)arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:'image/jpeg'});
+  }
+  $('saveBtn').onclick=function(){
+    var btn=this;
+    var d=new Date(),z=function(n){return (n<10?'0':'')+n};
+    var name='compare-'+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+'.jpg';
+    var blob=dataURLtoBlob(compose().toDataURL('image/jpeg',0.93));
+    var file=null;
+    try{file=new File([blob],name,{type:'image/jpeg'})}catch(_){}
+    function done(msg){btn.textContent=msg;setTimeout(function(){btn.textContent='บันทึกภาพ';render()},1800)}
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file]}).then(function(){done('บันทึกแล้ว')}).catch(function(e){
+        done(e&&e.name==='AbortError'?'ยกเลิกแล้ว':'บันทึกไม่สำเร็จ');
+      });
+    } else {
+      var a=document.createElement('a'),u=URL.createObjectURL(blob);
+      a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(function(){URL.revokeObjectURL(u)},4000);
+      done('ดาวน์โหลดแล้ว');
+    }
+  };
+  if('serviceWorker' in navigator&&location.protocol==='https:'){
+    window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})});
+  }
+
+  window.addEventListener('resize',render);
+  render();
+})();
+</script>
+</body>
+</html>
