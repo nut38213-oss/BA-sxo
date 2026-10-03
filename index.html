@@ -60,8 +60,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #stage{position:relative;width:100%;max-height:72vh;margin:0 auto;background:var(--stage);
   border-radius:4px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;aspect-ratio:3/4}
 .wrap{position:absolute;inset:0;overflow:hidden}
-.wrap img{position:absolute;left:0;top:0;max-width:none;pointer-events:none;transform-origin:50% 50%}
+.wrap img,.wrap video{position:absolute;left:0;top:0;max-width:none;pointer-events:none;transform-origin:50% 50%}
 .wrap img:not([src]){display:none}
+.wrap video.off{display:none}
+.file .thumb{display:flex;align-items:center;justify-content:center;font-size:20px}
+.vbar{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex-wrap:wrap}
+.vbar input[type=range]{flex:1;min-width:120px}
+.vbar .vt{font-size:.82rem;font-variant-numeric:tabular-nums;color:var(--muted);min-width:5.5em;text-align:right}
+.vbar .sub{display:flex;align-items:center;gap:8px;width:100%;font-size:.85rem;color:var(--muted)}
 .grid{position:absolute;inset:0;pointer-events:none;display:none}
 #stage.g-thirds .grid,#stage.g-fine .grid{display:block}
 #stage.g-thirds .grid{background:
@@ -123,14 +129,14 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
 
 <section class="loaders">
   <label class="file" id="fBefore">
-    <input type="file" accept="image/*" data-which="before">
+    <input type="file" accept="image/*,video/*" data-which="before">
     <span class="thumb"></span>
-    <div><b>ก่อนผ่าตัด</b><span>แตะเพื่อเลือกรูป</span></div>
+    <div><b>ก่อนผ่าตัด</b><span>แตะเพื่อเลือกรูปหรือวิดีโอ</span></div>
   </label>
   <label class="file" id="fAfter">
-    <input type="file" accept="image/*" data-which="after">
+    <input type="file" accept="image/*,video/*" data-which="after">
     <span class="thumb"></span>
-    <div><b>หลังผ่าตัด</b><span>แตะเพื่อเลือกรูป</span></div>
+    <div><b>หลังผ่าตัด</b><span>แตะเพื่อเลือกรูปหรือวิดีโอ</span></div>
   </label>
 </section>
 
@@ -143,14 +149,32 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
 </div>
 
 <div id="stage" class="g-off" tabindex="0" aria-label="พื้นที่เทียบภาพ">
-  <div class="wrap before"><img id="imgB" alt=""><div class="grid"></div><span class="tag">ก่อน</span></div>
-  <div class="wrap after"><img id="imgA" alt=""><div class="grid"></div><span class="tag">หลัง</span></div>
+  <div class="wrap before"><img id="imgB" alt=""><video id="vidB" class="off" playsinline muted loop preload="auto"></video><div class="grid"></div><span class="tag">ก่อน</span></div>
+  <div class="wrap after"><img id="imgA" alt=""><video id="vidA" class="off" playsinline muted loop preload="auto"></video><div class="grid"></div><span class="tag">หลัง</span></div>
   <div id="handle"></div>
   <svg id="meas" xmlns="http://www.w3.org/2000/svg"></svg>
   <div id="empty">เลือกรูปก่อนและหลังผ่าตัดด้านบนเพื่อเริ่มเทียบ</div>
 </div>
 <p id="hint"></p>
-<div class="savebar"><button class="btn" id="undoBtn" disabled>ย้อนกลับ</button><button class="btn" id="redoBtn" disabled>ไปข้างหน้า</button><button class="save" id="saveBtn" disabled>บันทึกภาพ</button></div>
+<div class="vbar" id="vbar" hidden>
+  <button class="btn" id="playBtn">▶︎ เล่น</button>
+  <input id="seek" type="range" min="0" max="1000" step="1" value="0" aria-label="ตำแหน่งวิดีโอ">
+  <span class="vt" id="vtime">0:00 / 0:00</span>
+  <div class="sub">
+    <label for="rateSel">ความเร็ว</label>
+    <select id="rateSel"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select>
+    <span id="offWrap" hidden style="display:contents"><label for="voff">เลื่อนเวลาวิดีโอหลัง</label>
+    <input id="voff" type="range" min="-5" max="5" step="0.05" value="0" style="flex:1"><span class="vt" id="voffO" style="min-width:3.5em">0.00s</span></span>
+  </div>
+  <div class="sub" style="flex-wrap:wrap">
+    <button class="btn" id="stabBtn">กันสั่น</button>
+    <button class="btn" id="stabGo" hidden>เริ่มวิเคราะห์</button>
+    <button class="btn" id="stabToggle" hidden aria-pressed="true">กันสั่น: เปิด</button>
+    <button class="btn" id="stabClr" hidden>ล้างกันสั่น</button>
+    <span id="stabInfo"></span>
+  </div>
+</div>
+<div class="savebar"><button class="btn" id="undoBtn" disabled>ย้อนกลับ</button><button class="btn" id="redoBtn" disabled>ไปข้างหน้า</button><button class="save" id="saveBtn" disabled>บันทึกภาพ</button><button class="save" id="recBtn" hidden>บันทึกวิดีโอ</button></div>
 
 <div class="controls">
   <fieldset>
@@ -233,7 +257,7 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
     <div class="opt"><span>ธีม</span>
       <select id="themeSel"><option value="">ตามระบบ</option><option value="light">สว่าง</option><option value="dark">มืด</option></select>
     </div>
-    <p class="note" id="saveNote">ปุ่มบันทึกจะเปิดหน้าแชร์ของเครื่อง เลือก "บันทึกภาพ" เพื่อเก็บลง Photos ได้เลย ภาพที่ได้เป็นไปตามที่เห็นบนจอ (ไม่รวมเส้นช่วยจัด) ก่อนใช้ภาพคนไข้นอกการรักษาควรมีความยินยอมเป็นลายลักษณ์อักษร</p>
+    <p class="note" id="saveNote">กันสั่น: หยุดวิดีโอที่เฟรมที่เห็นจุดอ้างอิงชัด กด "กันสั่น" แตะ 1–2 จุดที่อยู่นิ่งบนใบหน้า แล้วกด "เริ่มวิเคราะห์" ระบบจะเล่นวิดีโอหนึ่งรอบเพื่อติดตามจุด แล้วล็อกใบหน้าให้อยู่กับที่ วิดีโอ: "บันทึกภาพ" จะเก็บเฉพาะเฟรมที่หยุดอยู่ ส่วน "บันทึกวิดีโอ" จะอัดคลิปเทียบตั้งแต่ต้นจนจบตามโหมดที่ตั้งไว้ ปุ่มบันทึกจะเปิดหน้าแชร์ของเครื่อง เลือก "บันทึกภาพ" เพื่อเก็บลง Photos ได้เลย ภาพที่ได้เป็นไปตามที่เห็นบนจอ (ไม่รวมเส้นช่วยจัด) ก่อนใช้ภาพคนไข้นอกการรักษาควรมีความยินยอมเป็นลายลักษณ์อักษร</p>
   </fieldset>
 </div>
 </main>
@@ -256,15 +280,32 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
       var u=URL.createObjectURL(f); urls[w]=u;
       var box=inp.parentElement;
       box.classList.add('has');
-      box.querySelector('.thumb').style.backgroundImage='url("'+u+'")';
       box.querySelector('div span').textContent=f.name;
-      var img=w==='before'?imgB:imgA;
-      img.onload=function(){
-        if(w==='before'){S.hasB=true;S.ratio=img.naturalWidth/img.naturalHeight}
-        else{S.hasA=true;if(!S.hasB)S.ratio=img.naturalWidth/img.naturalHeight}
+      var th=box.querySelector('.thumb');
+      var isVid=/^video\//.test(f.type)||/\.(mov|mp4|m4v|webm)$/i.test(f.name);
+      var im=$(w==='before'?'imgB':'imgA'),vd=$(w==='before'?'vidB':'vidA');
+      pauseAll();recordedFile=null;
+      function ready(el){
+        var n=nat(el);if(!n[0])return;
+        if(w==='before'){S.hasB=true;S.ratio=n[0]/n[1]}
+        else{S.hasA=true;if(!S.hasB)S.ratio=n[0]/n[1]}
         render();
-      };
-      img.src=u;
+      }
+      if(isVid){
+        th.style.backgroundImage='';th.textContent='🎬';
+        im.removeAttribute('src');
+        vd.classList.remove('off');
+        vd.onloadedmetadata=function(){try{vd.currentTime=0.001}catch(_){}ready(vd)};
+        vd.onloadeddata=function(){render()};
+        vd.src=u;vd.load();
+        if(w==='before')imgB=vd;else imgA=vd;
+      } else {
+        th.textContent='';th.style.backgroundImage='url("'+u+'")';
+        vd.removeAttribute('src');vd.load();vd.classList.add('off');
+        im.onload=function(){ready(im)};
+        im.src=u;
+        if(w==='before')imgB=im;else imgA=im;
+      }
     });
   });
 
@@ -311,13 +352,16 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
   };
 
   var beforeWrap=document.querySelector('.wrap.before');
+  function nat(el){return el.tagName==='VIDEO'?[el.videoWidth||0,el.videoHeight||0]:[el.naturalWidth||0,el.naturalHeight||0]}
   function place(img,wrap,t){
-    var w=wrap.clientWidth,h=wrap.clientHeight,nw=img.naturalWidth,nh=img.naturalHeight;
+    var w=wrap.clientWidth,h=wrap.clientHeight,n=nat(img),nw=n[0],nh=n[1];
     if(!nw||!w||!h) return;
     var k=(S.fit==='cover'?Math.max:Math.min)(w/nw,h/nh),dw=nw*k,dh=nh*k;
     img.style.width=dw+'px';img.style.height=dh+'px';
     img.style.left=(w-dw)/2+'px';img.style.top=(h-dh)/2+'px';
-    img.style.transform='translate('+(t.tx/100*w)+'px,'+(t.ty/100*h)+'px) rotate('+t.r+'deg) scale('+(t.s/100*(t.flip?-1:1))+','+(t.s/100)+')';
+    var cs='',co=stabCorr(img);
+    if(co) cs=' translate('+(co.x*k)+'px,'+(co.y*k)+'px) rotate('+co.r+'rad) scale('+co.s+')';
+    img.style.transform='translate('+(t.tx/100*w)+'px,'+(t.ty/100*h)+'px) rotate('+t.r+'deg) scale('+(t.s/100*(t.flip?-1:1))+','+(t.s/100)+')'+cs;
   }
   function frameAR(){
     if(S.frame!=='orig'){
@@ -385,10 +429,21 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
     $('matchBtn').setAttribute('aria-pressed',tool==='match');
     $('linkBtn').setAttribute('aria-pressed',link);
     $('undoBtn').disabled=!hist.length;
+    var mv=masterV();
+    $('vbar').hidden=!mv;
+    $('offWrap').hidden=!(isV(imgB)&&isV(imgA));
+    var sd=STAB[stabSideNow()];
+    $('stabBtn').textContent=analyzing?'กำลังวิเคราะห์…':'กันสั่น (วิดีโอ'+(stabSideNow()==='before'?'ก่อน':'หลัง')+')';
+    $('stabBtn').disabled=!!analyzing;
+    $('stabGo').hidden=!(tool==='stab'&&pts.length>0);
+    $('stabToggle').hidden=$('stabClr').hidden=!sd;
+    if(sd){$('stabToggle').setAttribute('aria-pressed',sd.on);$('stabToggle').textContent='กันสั่น: '+(sd.on?'เปิด':'ปิด')}
+    $('recBtn').hidden=!mv||!canRecord();
     $('redoBtn').disabled=!(future.length&&snap()===lastRestored);
     $('angBtn').setAttribute('aria-pressed',tool==='angle');
     var h='';
-    if(tool==='match'){var M=MATCH[$('matchSel').value];h=(pts.length<2?'ภาพก่อน: แตะ ':'ภาพหลัง: แตะ ')+M[pts.length%2];}
+    if(tool==='stab'){h='แตะจุดอ้างอิงบนวิดีโอ'+(stabSide==='before'?'ก่อน':'หลัง')+' 1–2 จุดที่ไม่ขยับ เช่น หัวตาทั้งสองข้าง แล้วกด "เริ่มวิเคราะห์" ('+pts.length+'/2)';}
+    else if(tool==='match'){var M=MATCH[$('matchSel').value];h=(pts.length<2?'ภาพก่อน: แตะ ':'ภาพหลัง: แตะ ')+M[pts.length%2];}
     else if(tool==='fh') h='FH ('+(tgt==='before'?'ภาพก่อน':'ภาพหลัง')+'): '+FH_STEPS[pts.length];
     else if(tool==='angle'){var A=ANG[$('angType').value];h=A.name+': '+A.steps[pts.length];}
     else if(flash) h=flash;
@@ -513,6 +568,17 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
   }
   function addPoint(e){
     var rc=stage.getBoundingClientRect();
+    if(tool==='stab'){
+      var sb=S.mode==='sbs',st2=S.mode==='stack',lx2=e.clientX-rc.left,ly2=e.clientY-rc.top,first2=true;
+      if(sb||st2){
+        first2=sb?lx2<rc.width/2:ly2<rc.height/2;
+        if(first2!==(stabSide==='before')){flash='แตะในช่องวิดีโอ'+(stabSide==='before'?'ก่อน':'หลัง');render();return}
+      }
+      if(pts.length>=2)pts.shift();
+      var pp2={x:lx2-(!first2&&sb?rc.width/2:0),y:ly2-(!first2&&st2?rc.height/2:0)};
+      pts.push({x:lx2/rc.width,y:ly2/rc.height,pp:pp2});
+      render();return;
+    }
     if(tool==='match'){
       var isSbs=S.mode==='sbs',lx=e.clientX-rc.left,ly=e.clientY-rc.top;
       var inFirst=isSbs?lx<rc.width/2:ly<rc.height/2;
@@ -641,16 +707,18 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
   var downloads=true;
 
   function drawImg(ctx,img,x,y,w,h,xf,alpha){
-    if(!img.naturalWidth) return;
+    var n=nat(img);if(!n[0]) return;
     ctx.save();
     ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
     ctx.globalAlpha=alpha==null?1:alpha;
-    var k=(S.fit==='cover'?Math.max:Math.min)(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*k,dh=img.naturalHeight*k;
+    var k=(S.fit==='cover'?Math.max:Math.min)(w/n[0],h/n[1]),dw=n[0]*k,dh=n[1]*k;
     if(xf){
       ctx.translate(x+w/2+xf.tx/100*w,y+h/2+xf.ty/100*h);
       ctx.rotate(xf.r*Math.PI/180);
       ctx.scale(xf.s/100*(xf.flip?-1:1),xf.s/100);
     } else ctx.translate(x+w/2,y+h/2);
+    var co=stabCorr(img);
+    if(co){ctx.translate(co.x*k,co.y*k);ctx.rotate(co.r);ctx.scale(co.s,co.s)}
     ctx.drawImage(img,-dw/2,-dh/2,dw,dh);
     ctx.restore();
   }
@@ -663,11 +731,13 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
     ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText(text,bx+pad,y+m+bh/2);
     ctx.restore();
   }
-  function compose(){
-    var FA=frameAR(),L=S.frame==='orig'?(S.mode==='sbs'||S.mode==='stack'?3200:1600):2000,W,H;
+  function compose(maxL,c){
+    var FA=frameAR(),L=maxL||(S.frame==='orig'?(S.mode==='sbs'||S.mode==='stack'?3200:1600):2000),W,H;
     if(FA>=1){W=L;H=Math.round(L/FA)}else{H=L;W=Math.round(L*FA)}
+    W-=W%2;H-=H%2;
     var pw=S.mode==='sbs'?W/2:W,ph=S.mode==='stack'?H/2:H;
-    var c=document.createElement('canvas');c.width=W;c.height=H;
+    if(!c)c=document.createElement('canvas');
+    if(c.width!==W)c.width=W;if(c.height!==H)c.height=H;
     var ctx=c.getContext('2d');
     ctx.fillStyle='#6E7274';ctx.fillRect(0,0,W,H);
     var ghost=S.align&&!(S.mode==='sbs'||S.mode==='stack');
@@ -694,6 +764,200 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
     }
     drawMeasCanvas(ctx,W,H);
     return c;
+  }
+  // ---- video ----
+  var playing=false,vOff=0,recState=null,recordedFile=null;
+  function isV(el){return el.tagName==='VIDEO'&&!!el.getAttribute('src')}
+  function masterV(){return isV(imgB)?imgB:(isV(imgA)?imgA:null)}
+  function fmt(t){t=Math.max(0,t||0);var m=Math.floor(t/60),s2=Math.floor(t%60);return m+':'+(s2<10?'0':'')+s2}
+  function syncSlave(force){
+    if(!(isV(imgB)&&isV(imgA)))return;
+    var a=imgA,d=a.duration||0,tgt=clamp(imgB.currentTime+vOff,0,Math.max(0,d-0.05));
+    if(force||Math.abs(a.currentTime-tgt)>0.12){try{a.currentTime=tgt}catch(_){}}
+  }
+  function vids(){return [imgB,imgA].filter(isV)}
+  function playAll(){
+    var r0=parseFloat($('rateSel').value);
+    vids().forEach(function(v){v.playbackRate=r0;var p=v.play();if(p&&p.catch)p.catch(function(){})});
+    playing=true;$('playBtn').textContent='❚❚ หยุด';tick();
+  }
+  function pauseAll(){vids().forEach(function(v){v.pause()});playing=false;$('playBtn').textContent='▶︎ เล่น'}
+  function tick(){
+    var m=masterV();
+    if(m){
+      syncSlave(false);
+      if(STAB.before||STAB.after) placeAll();
+      if(m.duration){$('seek').value=Math.round(m.currentTime/m.duration*1000);$('vtime').textContent=fmt(m.currentTime)+' / '+fmt(m.duration)}
+      if(recState)recFrame();
+    }
+    if(playing||recState)requestAnimationFrame(tick);
+  }
+  $('playBtn').onclick=function(){if(recState)return;playing?pauseAll():playAll()};
+  $('seek').addEventListener('input',function(){
+    var m=masterV();if(!m||!m.duration||recState)return;
+    try{m.currentTime=this.value/1000*m.duration}catch(_){}
+    syncSlave(true);$('vtime').textContent=fmt(m.currentTime)+' / '+fmt(m.duration);
+  });
+  $('rateSel').onchange=function(){vids().forEach(function(v){v.playbackRate=parseFloat($('rateSel').value)})};
+  $('voff').addEventListener('input',function(){vOff=parseFloat(this.value);$('voffO').textContent=vOff.toFixed(2)+'s';syncSlave(true)});
+  function pickMime(){
+    if(!window.MediaRecorder||!MediaRecorder.isTypeSupported)return null;
+    var c=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
+    for(var i=0;i<c.length;i++)if(MediaRecorder.isTypeSupported(c[i]))return c[i];
+    return null;
+  }
+  var _canRec=null;function canRecord(){if(_canRec===null){var c=document.createElement('canvas');_canRec=!!(c.captureStream&&pickMime())}return _canRec}
+  function recFrame(){
+    var m=masterV();
+    compose(1280,recState.cv);
+    var pct=m.duration?Math.min(99,Math.round(m.currentTime/m.duration*100)):0;
+    $('recBtn').textContent='กำลังอัด '+pct+'%';
+    if(m.ended||(m.duration&&m.currentTime>=m.duration-0.04)){var r1=recState;recState=null;setTimeout(function(){r1.rec.stop()},120)}
+  }
+  $('recBtn').onclick=function(){
+    var btn=this;
+    if(recordedFile){
+      var f=recordedFile;
+      if(navigator.canShare&&navigator.canShare({files:[f]})){
+        navigator.share({files:[f]}).then(function(){recordedFile=null;btn.textContent='บันทึกวิดีโอ'}).catch(function(e){if(!(e&&e.name==='AbortError')){recordedFile=null;btn.textContent='บันทึกวิดีโอ'}});
+      } else {
+        var a=document.createElement('a'),u=URL.createObjectURL(f);a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(function(){URL.revokeObjectURL(u)},4000);recordedFile=null;btn.textContent='บันทึกวิดีโอ';
+      }
+      return;
+    }
+    if(recState)return;
+    var m=masterV(),mime=pickMime();if(!m||!mime)return;
+    pauseAll();
+    var cv=document.createElement('canvas');compose(1280,cv);
+    var stream=cv.captureStream(30),chunks=[];
+    var rec;try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8000000})}catch(_){rec=new MediaRecorder(stream)}
+    rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
+    var loops=vids().map(function(v){return v.loop});
+    rec.onstop=function(){
+      pauseAll();vids().forEach(function(v,i){v.loop=loops[i]});
+      var type=(rec.mimeType||mime).split(';')[0],ext=type.indexOf('mp4')>=0?'mp4':'webm';
+      var d=new Date(),z=function(n){return (n<10?'0':'')+n};
+      var name='compare-'+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+'.'+ext;
+      var blob=new Blob(chunks,{type:type});
+      try{recordedFile=new File([blob],name,{type:type})}catch(_){recordedFile=blob;recordedFile.name=name}
+      btn.textContent='แตะเพื่อแชร์/บันทึกวิดีโอ';btn.disabled=false;
+    };
+    vids().forEach(function(v){v.loop=false});
+    try{m.currentTime=0}catch(_){}
+    syncSlave(true);
+    btn.disabled=true;btn.textContent='กำลังเตรียม…';
+    setTimeout(function(){
+      recState={cv:cv,rec:rec};rec.start(250);btn.disabled=false;
+      var r0=parseFloat($('rateSel').value);
+      vids().forEach(function(v){v.playbackRate=r0;var p=v.play();if(p&&p.catch)p.catch(function(){})});
+      playing=true;$('playBtn').textContent='❚❚ หยุด';tick();
+    },400);
+  };
+  // keep layout fresh while a video plays (first frame sizes)
+  // ---- stabilization ----
+  var STAB={before:null,after:null},stabSide='before',analyzing=null;
+  function sideOf(el){return el===imgB?'before':'after'}
+  function stabSideNow(){var el=tgt==='before'?imgB:imgA;if(isV(el))return tgt;var m=masterV();return m?sideOf(m):'before'}
+  function placeAll(){place(imgA,afterWrap,TR.after);place(imgB,beforeWrap,TR.before)}
+  ['vidA','vidB'].forEach(function(id){$(id).addEventListener('seeked',function(){placeAll()})});
+  function sampleAt(st,t){
+    var a=st.samples,lo=0,hi=a.length-1;
+    if(t<=a[0].t)return a[0].p;if(t>=a[hi].t)return a[hi].p;
+    while(hi-lo>1){var mid=(lo+hi)>>1;if(a[mid].t<=t)lo=mid;else hi=mid}
+    var u=(t-a[lo].t)/((a[hi].t-a[lo].t)||1);
+    return a[lo].p.map(function(q,i){var q2=a[hi].p[i];return {x:q.x+(q2.x-q.x)*u,y:q.y+(q2.y-q.y)*u}});
+  }
+  function stabCorr(el){
+    if(!isV(el))return null;
+    var st=STAB[sideOf(el)];if(!st||!st.on||!st.samples.length)return null;
+    var N=nat(el),cur=sampleAt(st,el.currentTime),ref=st.ref;
+    if(ref.length===1)return {x:ref[0].x-cur[0].x,y:ref[0].y-cur[0].y,r:0,s:1};
+    var a0={x:ref[0].x-N[0]/2,y:ref[0].y-N[1]/2},b0={x:ref[1].x-N[0]/2,y:ref[1].y-N[1]/2};
+    var at={x:cur[0].x-N[0]/2,y:cur[0].y-N[1]/2},bt={x:cur[1].x-N[0]/2,y:cur[1].y-N[1]/2};
+    var v0x=b0.x-a0.x,v0y=b0.y-a0.y,vtx=bt.x-at.x,vty=bt.y-at.y;
+    var lt=Math.hypot(vtx,vty);if(lt<1)return null;
+    var sc=Math.hypot(v0x,v0y)/lt,ang=Math.atan2(v0y,v0x)-Math.atan2(vty,vtx);
+    var c=Math.cos(ang),sn=Math.sin(ang);
+    return {x:a0.x-sc*(c*at.x-sn*at.y),y:a0.y-sc*(sn*at.x+c*at.y),r:ang,s:sc};
+  }
+  function fitK(el,w,h){var n=nat(el);return (S.fit==='cover'?Math.max:Math.min)(w/n[0],h/n[1])}
+  $('stabBtn').onclick=function(){
+    if(analyzing||!masterV())return;
+    pauseAll();stabSide=stabSideNow();STAB[stabSide]=null;tool='stab';pts=[];placeAll();render();
+  };
+  $('stabToggle').onclick=function(){var sd=STAB[stabSideNow()];if(sd){sd.on=!sd.on;placeAll();render()}};
+  $('stabClr').onclick=function(){STAB[stabSideNow()]=null;placeAll();render()};
+  $('stabGo').onclick=function(){
+    var el=stabSide==='before'?imgB:imgA,wrap=stabSide==='before'?beforeWrap:afterWrap;
+    if(!isV(el)||!pts.length)return;
+    var w=wrap.clientWidth,h=wrap.clientHeight,k=fitK(el,w,h),N=nat(el);
+    var refs=pts.map(function(q){var l=toLocal(TR[stabSide],q.pp,w,h);return {x:l.x/k+N[0]/2,y:l.y/k+N[1]/2}});
+    if(refs.some(function(q){return q.x<0||q.y<0||q.x>N[0]||q.y>N[1]})){flash='จุดอยู่นอกวิดีโอ ลองใหม่';pts=[];render();return}
+    tool=null;pts=[];runStab(el,stabSide,refs);
+  };
+  function runStab(el,side,refs){
+    var N=nat(el),f=Math.min(1,640/Math.max(N[0],N[1])),aw=Math.round(N[0]*f),ah=Math.round(N[1]*f);
+    var cv=document.createElement('canvas');cv.width=aw;cv.height=ah;
+    var cx=cv.getContext('2d',{willReadFrequently:true});
+    var HS=12,TS=HS*2+1,NN=TS*TS;
+    function grab(){
+      cx.drawImage(el,0,0,aw,ah);
+      var d=cx.getImageData(0,0,aw,ah).data,g=new Float32Array(aw*ah),I=new Float64Array((aw+1)*(ah+1));
+      for(var y=0;y<ah;y++){var row=0;for(var x=0;x<aw;x++){var i=(y*aw+x)*4,v=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];g[y*aw+x]=v;row+=v;I[(y+1)*(aw+1)+x+1]=I[y*(aw+1)+x+1]+row}}
+      return {g:g,I:I};
+    }
+    function pmean(F,x,y){var W=aw+1,x0=x-HS,y0=y-HS,x1=x+HS+1,y1=y+HS+1;return (F.I[y1*W+x1]-F.I[y0*W+x1]-F.I[y1*W+x0]+F.I[y0*W+x0])/NN}
+    function inb(x,y){return x-HS>=0&&y-HS>=0&&x+HS<aw&&y+HS<ah}
+    var F0=grab(),tpls=[];
+    var prev=refs.map(function(q){return {x:clamp(Math.round(q.x*f),HS,aw-HS-1),y:clamp(Math.round(q.y*f),HS,ah-HS-1)}});
+    prev.forEach(function(q){var m=pmean(F0,q.x,q.y),t=new Float32Array(NN),n=0;
+      for(var dy=-HS;dy<=HS;dy++)for(var dx=-HS;dx<=HS;dx++)t[n++]=F0.g[(q.y+dy)*aw+q.x+dx]-m;tpls.push(t)});
+    function cost(F,x,y,t){var m=pmean(F,x,y),c=0,n=0;for(var dy=-HS;dy<=HS;dy++){var o=(y+dy)*aw+x;for(var dx=-HS;dx<=HS;dx++){c+=Math.abs(F.g[o+dx]-m-t[n++])}}return c}
+    function track(F,R){
+      return prev.map(function(q,i){
+        var best=1e18,bx=q.x,by=q.y,x0=Math.round(q.x),y0=Math.round(q.y),C={};
+        for(var dy=-R;dy<=R;dy++)for(var dx=-R;dx<=R;dx++){var x=x0+dx,y=y0+dy;if(!inb(x,y))continue;var c=cost(F,x,y,tpls[i]);C[x+','+y]=c;if(c<best){best=c;bx=x;by=y}}
+        var sx=bx,sy=by,l=C[(bx-1)+','+by],rr=C[(bx+1)+','+by],u=C[bx+','+(by-1)],dd=C[bx+','+(by+1)];
+        if(l!=null&&rr!=null){var den=l-2*best+rr;if(den>0)sx+=0.5*(l-rr)/den}
+        if(u!=null&&dd!=null){var den2=u-2*best+dd;if(den2>0)sy+=0.5*(u-dd)/den2}
+        prev[i]={x:sx,y:sy};return {x:sx/f,y:sy/f};
+      });
+    }
+    var other=el===imgB?imgA:imgB;if(isV(other))other.pause();
+    var loop0=el.loop,rate0=el.playbackRate,t0=el.currentTime,samples=[],first=true,lastT=-1,done=false;
+    var hasCb=!!el.requestVideoFrameCallback;
+    analyzing={side:side};render();
+    function step(t){
+      if(done)return;
+      if(t!==lastT){
+        lastT=t;
+        try{var F=grab();samples.push({t:t,p:track(F,first?40:18)});first=false}catch(err){finish(err);return}
+        $('stabInfo').textContent='วิเคราะห์ '+Math.min(99,Math.round(t/(el.duration||1)*100))+'%';
+      }
+      if(el.ended||(el.duration&&t>=el.duration-0.03)){finish();return}
+      if(hasCb)el.requestVideoFrameCallback(function(now,md){step(md.mediaTime)});
+      else requestAnimationFrame(function(){step(el.currentTime)});
+    }
+    function finish(err){
+      if(done)return;done=true;
+      el.pause();el.loop=loop0;el.playbackRate=rate0;analyzing=null;
+      if(err||samples.length<2){$('stabInfo').textContent='วิเคราะห์ไม่สำเร็จ';render();return}
+      samples.sort(function(a,b){return a.t-b.t});
+      STAB[side]={ref:refs,samples:samples,on:true};
+      $('stabInfo').textContent='กันสั่นพร้อมแล้ว ('+samples.length+' เฟรม)';
+      try{el.currentTime=t0}catch(_){}
+      syncSlave(true);placeAll();render();
+    }
+    el.addEventListener('ended',function onE(){el.removeEventListener('ended',onE);setTimeout(function(){finish()},50)});
+    el.loop=false;
+    el.addEventListener('seeked',function onS(){
+      el.removeEventListener('seeked',onS);
+      el.playbackRate=hasCb?1:0.5;
+      var pr=el.play();if(pr&&pr.catch)pr.catch(function(){finish(new Error('play'))});
+      if(hasCb)el.requestVideoFrameCallback(function(now,md){step(md.mediaTime)});else requestAnimationFrame(function(){step(el.currentTime)});
+    });
+    try{el.currentTime=0}catch(_){finish(new Error('seek'))}
   }
   function dataURLtoBlob(u){
     var parts=u.split(','),bin=atob(parts[1]),n=bin.length,arr=new Uint8Array(n);
